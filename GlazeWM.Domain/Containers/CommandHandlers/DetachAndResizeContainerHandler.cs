@@ -18,26 +18,15 @@ namespace GlazeWM.Domain.Containers.CommandHandlers
     public CommandResponse Handle(DetachAndResizeContainerCommand command)
     {
       var childToRemove = command.ChildToRemove;
-      var parent = childToRemove.Parent;
-      var grandparent = parent.Parent;
 
       if (childToRemove is not IResizable)
         throw new Exception("Cannot resize a non-resizable container. This is a bug.");
 
-      var isEmptySplitContainer =
-        parent is SplitContainer &&
-        parent.Children.Count == 1 &&
-        parent is not Workspace;
-
+      var lastRemovedContainer = ContainerService.GetLastFlattenedContainer(childToRemove) ?? childToRemove;
       // Get the freed up space after container is detached.
-      var availableSizePercentage = isEmptySplitContainer
-        ? (parent as IResizable).SizePercentage
-        : (childToRemove as IResizable).SizePercentage;
-
+      var availableSizePercentage = (lastRemovedContainer as IResizable).SizePercentage;
       // Resize children of grandparent if `childToRemove`'s parent is also to be detached.
-      var containersToResize = isEmptySplitContainer
-        ? grandparent.ChildrenOfType<IResizable>()
-        : parent.ChildrenOfType<IResizable>();
+      var containersToResize = lastRemovedContainer.Parent.ChildrenOfType<IResizable>();
 
       _bus.Invoke(new DetachContainerCommand(childToRemove));
 

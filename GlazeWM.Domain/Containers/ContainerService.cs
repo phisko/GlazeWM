@@ -4,6 +4,7 @@ using System.Linq;
 using GlazeWM.Domain.Common.Enums;
 using GlazeWM.Domain.UserConfigs;
 using GlazeWM.Domain.Windows;
+using GlazeWM.Domain.Workspaces;
 using GlazeWM.Infrastructure.Utils;
 
 namespace GlazeWM.Domain.Containers
@@ -191,6 +192,46 @@ namespace GlazeWM.Domain.Containers
       }
 
       throw new Exception("No common ancestor between containers. This is a bug.");
+    }
+
+    public static bool WillSplitContainerFlatten(Container childToRemove)
+    {
+      var container = childToRemove.Parent;
+      if (container is Workspace or not SplitContainer)
+        return false;
+
+      var remainingChildren = container.Children.Where(child => child != childToRemove);
+      var remainingChildrenCount = remainingChildren.Count();
+
+      if (remainingChildrenCount > 1)
+        return false;
+
+      return remainingChildrenCount == 0 || remainingChildren.First() is SplitContainer;
+    }
+
+    public static Container GetLastFlattenedContainer(Container childToRemove)
+    {
+      var container = childToRemove.Parent;
+
+      if (WillSplitContainerFlatten(container))
+      {
+        return GetLastFlattenedContainer(container);
+      }
+
+      if (WillSplitContainerFlatten(childToRemove))
+      {
+        return container;
+      }
+
+      return null;
+    }
+
+    public static Container GetLastNotFlattenedContainer(Container childToRemove)
+    {
+      var lastFlattened = GetLastFlattenedContainer(childToRemove);
+      if (lastFlattened == null)
+        return childToRemove;
+      return lastFlattened.Parent;
     }
   }
 }

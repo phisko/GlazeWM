@@ -213,7 +213,10 @@ namespace GlazeWM.Domain.Windows.CommandHandlers
 
       // The window cannot be moved within the parent container, so traverse upwards to find a
       // suitable ancestor to move to.
-      var ancestorWithTilingDirection = windowToMove.Parent.Ancestors.FirstOrDefault(
+      var survivingParent = ContainerService.GetLastNotFlattenedContainer(windowToMove);
+      if (survivingParent == windowToMove)
+        survivingParent = windowToMove.Parent;
+      var ancestorWithTilingDirection = survivingParent.SelfAndAncestors.FirstOrDefault(
         (container) =>
           (container as SplitContainer)?.TilingDirection == direction.GetTilingDirection()
       ) as SplitContainer;
